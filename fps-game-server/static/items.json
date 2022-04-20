@@ -1,0 +1,130 @@
+[
+  {
+    "id": 1,
+    "name": "Mũ beret",
+    "type": "hat",
+    "level": 1,
+    "statMin": 5,
+    "statMax": 7
+  },
+  {
+    "id": 2,
+    "name": "Mũ lưỡi trai",
+    "type": "hat",
+    "level": 2,
+    "statMin": 7,
+    "statMax": 9
+  },
+  {
+    "id": 3,
+    "name": "Mũ bảo hiểm",
+    "type": "hat",
+    "level": 3,
+    "statMin": 9,
+    "statMax": 11
+  },
+  {
+    "id": 4,
+    "name": "Mũ cối",
+    "type": "hat",
+    "level": 4,
+    "statMin": 11,
+    "statMax": 13
+  },
+  {
+    "id": 5,
+    "name": "Áo phông",
+    "type": "shirt",
+    "level": 1,
+    "statMin": 5,
+    "statMax": 7
+  },
+  {
+    "id": 6,
+    "name": "Áo hoodie",
+    "type": "shirt",
+    "level": 2,
+    "statMin": 7,
+    "statMax": 9
+  },
+  {
+    "id": 7,
+    "name": "Áo giáp sắt",
+    "type": "shirt",
+    "level": 3,
+    "statMin": 9,
+    "statMax": 11
+  },
+  {
+    "id": 8,
+    "name": "Áo chống đạn",
+    "type": "shirt",
+    "level": 4,
+    "statMin": 11,
+    "statMax": 13
+  },
+  {
+    "id": 9,
+    "name": "Quần sịp",
+    "type": "pants",
+    "level": 1,
+    "statMin": 5,
+    "statMax": 7
+  },
+  {
+    "id": 10,
+    "name": "Quần đùi",
+    "type": "pants",
+    "level": 2,
+    "statMin": 7,
+    "statMax": 9
+  },
+  {
+    "id": 11,
+    "name": "Quần bò",
+    "type": "pants",
+    "level": 3,
+    "statMin": 9,
+    "statMax": 11
+  },
+  {
+    "id": 12,
+    "name": "Quần quân đội",
+    "type": "pants",
+    "level": 4,
+    "statMin": 11,
+    "statMax": 13
+  },
+  {
+    "id": 13,
+    "name": "Súng phun nước",
+    "type": "gun",
+    "level": 1,
+    "statMin": 10,
+    "statMax": 15
+  },
+  {
+    "id": 14,
+    "name": "Desert Eagle",
+    "type": "gun",
+    "level": 2,
+    "statMin": 15,
+    "statMax": 23
+  },
+  {
+    "id": 15,
+    "name": "AK47",
+    "type": "gun",
+    "level": 3,
+    "statMin": 25,
+    "statMax": 34
+  },
+  {
+    "id": 16,
+    "name": "SCAR-H",
+    "type": "gun",
+    "level": 4,
+    "statMin": 30,
+    "statMax": 43
+  }
+]
