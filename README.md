@@ -49,7 +49,7 @@
 
 -   19003: nghe client
 
-# Giao thức game PWNBG
+# Giao thức game PWNBG (packet/UDP)
 
 ## Packet dạng chung (cho cả server lobby (SL), server game (SG) và client(C)):
 
@@ -188,3 +188,9 @@
 ### SG yêu cầu SC scale down
 - **Byte 1** = 2
 
+# Giao thức game PWNBG (JSON/http)
+
+## Endpoint `/`
+>2 loại alert scale
+- `{"alert":"scale-up"}`
+- `{"alert":"scale-down"}`

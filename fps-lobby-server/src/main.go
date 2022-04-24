@@ -71,18 +71,32 @@ func HttpListener(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	badRequest := false
+	requestType := jsonMap["alert"].(string)
+	switch requestType {
+	case "scale-up":
+		scaleGameServer(true)
+	case "scale-down":
+		scaleGameServer(false)
+	default:
+		badRequest = true
+	}
 
-	fmt.Println(jsonMap["alert"].(string))
+	if badRequest {
+		w.WriteHeader(http.StatusBadRequest)
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
 }
 
 func scaleGameServer(isScaleUp bool) {
 	var buf bytes.Buffer
 	utils.WriteAs1Byte(&buf, utils.PacketType_ScaleAlertToGameServer)
 	if isScaleUp {
+		log.Println("Scaling up game servers")
 		utils.WriteAs1Byte(&buf, utils.PacketSubType_ScaleAlertToGameServer_ScaleUp)
 	} else {
+		log.Println("Scaling down game servers")
 		utils.WriteAs1Byte(&buf, utils.PacketSubType_ScaleAlertToGameServer_ScaleDown)
 	}
 	packetToSend := buf.Bytes()
