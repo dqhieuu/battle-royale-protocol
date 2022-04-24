@@ -195,6 +195,8 @@ func clientToGameServer(url string) {
 						if roomState == game.FINISHED {
 							return
 						}
+					case utils.PacketSubType_GameServerAndClientInGame_PacketFrequencyUpdate:
+						packetFreq = utils.ReadAs2Byte(&byteBuffer)
 					}
 				}
 			}

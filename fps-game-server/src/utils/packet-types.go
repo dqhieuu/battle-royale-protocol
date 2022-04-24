@@ -26,6 +26,7 @@ const (
 	PacketSubType_GameServerAndClientInGame_ItemUpdate             = 2
 	PacketSubType_GameServerAndClientInGame_HPUpdate               = 3
 	PacketSubType_GameServerAndClientInGame_StateUpdate            = 4
+	PacketSubType_GameServerAndClientInGame_PacketFrequencyUpdate  = 5
 )
 
 const (

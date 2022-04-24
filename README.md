@@ -174,3 +174,8 @@
 
 - **Byte 1** = 4
 - **Byte 2:** Các trạng thái (0 = chưa bắt đầu, 1 = đang chơi, 2 = đã kết thúc)
+
+### SG: Thay đổi tần suất gửi gói tin
+
+- **Byte 1** = 5
+- **Byte 2-3:** Tần suất gửi (Hz)

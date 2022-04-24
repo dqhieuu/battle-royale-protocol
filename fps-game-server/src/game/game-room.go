@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const StateTransitionDelay = 5 * time.Second
+const StateTransitionDelay = 7 * time.Second
 
 const MaxShootableDistance = 40
 const SqrMaxShootableDistance = MaxShootableDistance * MaxShootableDistance

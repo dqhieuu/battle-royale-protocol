@@ -31,6 +31,9 @@ var rooms []*game.GameRoom
 
 var packetFrequency = 64
 
+const PacketFrequencyUpperLimit = 256
+const PacketFrequencyLowerLimit = 1
+
 var packetCounter = ratecounter.NewRateCounter(1 * time.Second)
 
 func addPlayerByName(name string, isBot bool) *game.Player {
@@ -67,6 +70,22 @@ func addPlayerByName(name string, isBot bool) *game.Player {
 
 	return newPlayer
 }
+
+func scaleFrequencyUp() {
+	if packetFrequency >= PacketFrequencyUpperLimit {
+		return
+	}
+	packetFrequency *= 2
+}
+
+func scaleFrequencyDown() {
+	if packetFrequency <= PacketFrequencyLowerLimit {
+		return
+	}
+	packetFrequency /= 2
+}
+
+var mapScale float32 = 0.8
 
 func loop() {
 	var lobbyTableRows []*g.TableRowWidget
@@ -148,13 +167,30 @@ func loop() {
 				packetFrequency,
 				packetCounter.Rate(),
 			))),
-		g.Table().Columns(
-			g.TableColumn("Phòng"),
-			g.TableColumn("Người chơi"),
-			g.TableColumn("Trạng thái"),
-		).Rows(
-			lobbyTableRows...,
-		).Freeze(1, 1).Size(400, 100),
+		g.Row(
+			g.Table().Columns(
+				g.TableColumn("Phòng"),
+				g.TableColumn("Người chơi"),
+				g.TableColumn("Trạng thái"),
+			).Rows(
+				lobbyTableRows...,
+			).Freeze(1, 1).Size(400, 100),
+			g.Column(
+				g.Row(
+					g.Label("Kích cỡ vẽ canvas map"),
+					g.InputFloat(&mapScale).Size(70),
+				),
+				g.Row(
+					g.Label("Scale tần suất gửi packet thủ công"),
+					g.Button("+").OnClick(func() {
+						scaleFrequencyUp()
+					}).Size(30, 30).Disabled(packetFrequency >= PacketFrequencyUpperLimit),
+					g.Button("-").OnClick(func() {
+						scaleFrequencyDown()
+					}).Size(30, 30).Disabled(packetFrequency <= PacketFrequencyLowerLimit),
+				),
+			),
+		),
 		g.Table().Columns(
 			g.TableColumn("#"),
 			g.TableColumn("Tên"),
@@ -173,14 +209,14 @@ func loop() {
 			blue := color.RGBA{37, 37, 250, 255}
 			yellow := color.RGBA{252, 186, 3, 255}
 			if texture != nil {
-				canvas.AddImage(texture, pos, pos.Add(image.Point{400, 400}))
+				canvas.AddImage(texture, pos, pos.Add(image.Point{int(float32(400) * mapScale), int(float32(400) * mapScale)}))
 			}
 			for i := range players {
-				circlePos := pos.Add(image.Point{int(players[i].Location.X), int(players[i].Location.Y)})
-				canvas.AddCircleFilled(circlePos, 5, red)
-				canvas.AddCircleFilled(circlePos, 3, color.White)
+				circlePos := pos.Add(image.Point{int(float32(players[i].Location.X) * mapScale), int(float32(players[i].Location.Y) * mapScale)})
+				canvas.AddCircleFilled(circlePos, float32(5)*mapScale, red)
+				canvas.AddCircleFilled(circlePos, float32(3)*mapScale, color.White)
 				if players[i].IsDead() {
-					canvas.AddCircleFilled(circlePos, 3, color.Black)
+					canvas.AddCircleFilled(circlePos, float32(3)*mapScale, color.Black)
 				} else {
 					for j := range players {
 						if i == j || players[j].IsDead() {
@@ -192,7 +228,9 @@ func loop() {
 						yd2 := yd * yd
 						if xd2+yd2 < game.SqrMaxShootableDistance {
 							canvas.AddLine(
-								pos.Add(image.Point{int(players[i].Location.X), int(players[i].Location.Y)}), pos.Add(image.Point{int(players[j].Location.X), int(players[j].Location.Y)}), blue, 3)
+								pos.Add(image.Point{int(float32(players[i].Location.X) * mapScale), int(float32(players[i].Location.Y) * mapScale)}),
+								pos.Add(image.Point{int(float32(players[j].Location.X) * mapScale), int(float32(players[j].Location.Y) * mapScale)}),
+								blue, float32(3)*mapScale)
 							break
 						}
 					}
@@ -202,8 +240,8 @@ func loop() {
 			// to prevent overlapping geometry
 			for i := range players {
 				if i == selectedPlayerIndex {
-					circlePos := pos.Add(image.Point{int(players[i].Location.X), int(players[i].Location.Y)})
-					canvas.AddCircle(circlePos, 20, yellow, 20, 3)
+					circlePos := pos.Add(image.Point{int(float32(players[i].Location.X) * mapScale), int(float32(players[i].Location.Y) * mapScale)})
+					canvas.AddCircle(circlePos, float32(float32(20)*mapScale), yellow, 20, float32(3)*mapScale)
 				}
 			}
 
@@ -226,9 +264,18 @@ func clientConnectionListener(url string) {
 	}
 }
 
-func sendGameSnapshotToClient(conn net.Conn, player *game.Player, room *game.GameRoom) {
+func sendGameSnapshotToClient(conn net.Conn, player *game.Player, room *game.GameRoom, sendFreq int) {
 	time.Sleep(100 * time.Millisecond) // wait for client to update
 	for {
+		if sendFreq != packetFrequency {
+			sendFreq = packetFrequency
+			var buf bytes.Buffer
+			utils.WriteAs1Byte(&buf, utils.PacketType_GameServerAndClientInGame)
+			utils.WriteAs1Byte(&buf, utils.PacketSubType_GameServerAndClientInGame_PacketFrequencyUpdate)
+			utils.WriteAs2Byte(&buf, sendFreq)
+			conn.Write(buf.Bytes())
+			packetCounter.Incr(1)
+		}
 		var buf bytes.Buffer
 		utils.WriteAs1Byte(&buf, utils.PacketType_GameServerAndClientInGame)
 		utils.WriteAs1Byte(&buf, utils.PacketSubType_GameServerAndClientInGame_StateUpdate)
@@ -242,7 +289,7 @@ func sendGameSnapshotToClient(conn net.Conn, player *game.Player, room *game.Gam
 		utils.WriteAs2Byte(&buf, player.HP)
 		conn.Write(buf.Bytes())
 		packetCounter.Incr(1)
-		sleepTime := time.Millisecond * time.Duration(1000.0/float64(packetFrequency))
+		sleepTime := time.Millisecond * time.Duration(1000.0/float64(sendFreq))
 		time.Sleep(sleepTime)
 	}
 }
@@ -317,8 +364,7 @@ func handleClient(conn net.Conn) {
 					conn.Write(byteBuffer.Bytes())
 					packetCounter.Incr(1) // gửi đến conn
 
-					go sendGameSnapshotToClient(conn, player, playerRoom.(*game.GameRoom))
-
+					go sendGameSnapshotToClient(conn, player, playerRoom.(*game.GameRoom), packetFrequency)
 				}
 			case utils.PacketType_GameServerAndClientInGame:
 				packetSubType := utils.ReadAs1Byte(&byteBuffer)
