@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"fps-game-server/src/game"
 	"fps-game-server/src/utils"
@@ -15,18 +14,27 @@ import (
 	"log"
 	"math/rand"
 	"net"
-	"net/http"
 	"strconv"
 	"sync"
 	"time"
 )
 
+const GameServerToLobbyServerPort = ":19000"
+const ClientToGameServerPort = ":19003"
+
+// OutboundIp is this server's ip address
+var OutboundIp = utils.GetOutboundIP()
+
 var texture *g.Texture
 
 var selectedRoomIndex int
 var selectedPlayerIndex = -1
+var mapScale float32 = 0.8
 var playerRoomLookupByName sync.Map
 var playerSessionLookupByName sync.Map
+var lobbyAddress = "127.0.0.1"
+var connectedToLobbyServer = false
+
 var rooms []*game.GameRoom
 
 var packetFrequency = 64
@@ -34,6 +42,7 @@ var packetFrequency = 64
 const PacketFrequencyUpperLimit = 256
 const PacketFrequencyLowerLimit = 1
 
+// for getting packet/s stats
 var packetCounter = ratecounter.NewRateCounter(1 * time.Second)
 
 func addPlayerByName(name string, isBot bool) *game.Player {
@@ -85,7 +94,18 @@ func scaleFrequencyDown() {
 	packetFrequency /= 2
 }
 
-var mapScale float32 = 0.8
+func sendUpdateToLobbyServerFrequently(conn net.Conn) {
+	for {
+		var buf bytes.Buffer
+		utils.WriteAs1Byte(&buf, utils.PacketType_GameServerPeriodicToLobbyServer)
+		utils.WriteAs1Byte(&buf, utils.PacketSubType_GameServerPeriodicToLobbyServer_RoomStatus)
+		utils.WriteAs2Byte(&buf, packetFrequency)
+		conn.Write(buf.Bytes())
+		packetCounter.Incr(1)
+
+		time.Sleep(time.Second * 5)
+	}
+}
 
 func loop() {
 	var lobbyTableRows []*g.TableRowWidget
@@ -159,10 +179,16 @@ func loop() {
 		)
 	}
 
+	connectText := "Kết nối"
+	if connectedToLobbyServer {
+		connectText = "Đã kết nối"
+	}
+
 	g.SingleWindow().Layout(
 		g.Style().
 			SetColor(g.StyleColorText, color.RGBA{100, 255, 255, 255}).
-			To(g.Label(fmt.Sprintf("Số người chơi tối thiểu để bắt đầu: %d. Tần suất gửi gói tin: %dHz. Số socket IO / giây: %d",
+			To(g.Label(fmt.Sprintf("IP: %s. Số người chơi tối thiểu để bắt đầu: %d. Tần suất gửi gói tin: %dHz. Số socket IO / giây: %d",
+				OutboundIp,
 				game.MinTriggerPlayingPlayers,
 				packetFrequency,
 				packetCounter.Rate(),
@@ -176,6 +202,13 @@ func loop() {
 				lobbyTableRows...,
 			).Freeze(1, 1).Size(400, 100),
 			g.Column(
+				g.Row(
+					g.Label("Địa chỉ server lobby"),
+					g.Style().SetDisabled(connectedToLobbyServer).To(g.InputText(&lobbyAddress).Size(200)),
+					g.Button(connectText).OnClick(func() {
+						go gameServerToLobbyServer(lobbyAddress + GameServerToLobbyServerPort)
+					}).Disabled(connectedToLobbyServer),
+				),
 				g.Row(
 					g.Label("Kích cỡ vẽ canvas map"),
 					g.InputFloat(&mapScale).Size(70),
@@ -244,10 +277,9 @@ func loop() {
 					canvas.AddCircle(circlePos, float32(float32(20)*mapScale), yellow, 20, float32(3)*mapScale)
 				}
 			}
-
-			g.Update()
 		}),
 	)
+	g.Update()
 }
 
 func clientConnectionListener(url string) {
@@ -261,6 +293,60 @@ func clientConnectionListener(url string) {
 		}
 	} else {
 		log.Fatal(err)
+	}
+}
+
+func gameServerToLobbyServer(url string) {
+	if conn, err := kcp.Dial(url); err == nil {
+		buffer := make([]byte, 1024)
+
+		var buf bytes.Buffer
+		utils.WriteAs1Byte(&buf, utils.PacketType_GameServerConnectToLobbyServer)
+		utils.WriteAs1Byte(&buf, utils.PacketSubType_GameServerConnectToLobbyServer_AddToLobby)
+		utils.WriteAs2Byte(&buf, packetFrequency)
+		conn.Write(buf.Bytes())
+
+		buffer = make([]byte, 1024)
+		if _, err := conn.Read(buffer); err == nil {
+			var byteBuffer bytes.Buffer
+			byteBuffer.Write(buffer)
+			packetType := utils.ReadAs1Byte(&byteBuffer)
+			if packetType != utils.PacketType_GameServerConnectToLobbyServer {
+				log.Println("Wrong packet type")
+				return
+			}
+			packetSubType := utils.ReadAs1Byte(&byteBuffer)
+			if packetSubType != utils.PacketSubType_GameServerConnectToLobbyServer_AddToLobbySuccess {
+				log.Println("Not lobby success")
+				return
+			}
+			connectedToLobbyServer = true
+			go sendUpdateToLobbyServerFrequently(conn)
+
+			for {
+				buffer = make([]byte, 1024)
+				if _, err := conn.Read(buffer); err == nil {
+					var byteBuffer bytes.Buffer
+					byteBuffer.Write(buffer)
+					packetType := utils.ReadAs1Byte(&byteBuffer)
+					packetSubType := utils.ReadAs1Byte(&byteBuffer)
+					switch packetType {
+					case utils.PacketType_ScaleAlertToGameServer:
+						switch packetSubType {
+						case utils.PacketSubType_ScaleAlertToGameServer_ScaleUp:
+							scaleFrequencyUp()
+						case utils.PacketSubType_ScaleAlertToGameServer_ScaleDown:
+							scaleFrequencyDown()
+						}
+					}
+				}
+			}
+		} else {
+			log.Println(err)
+		}
+
+	} else {
+		log.Println(err)
 	}
 }
 
@@ -381,18 +467,6 @@ func handleClient(conn net.Conn) {
 	}
 }
 
-func HttpListener(w http.ResponseWriter, r *http.Request) {
-	var jsonMap map[string]any
-	err := json.NewDecoder(r.Body).Decode(&jsonMap)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	fmt.Fprintf(w, "Hello, %s!", jsonMap["alert"])
-
-	fmt.Println(jsonMap["alert"].(string))
-}
-
 func loadTextures() {
 	img, _ := g.LoadImage("static/img/map.png")
 	g.NewTextureFromRgba(img, func(tex *g.Texture) {
@@ -403,10 +477,7 @@ func loadTextures() {
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	go clientConnectionListener(":19003")
-
-	http.HandleFunc("/", HttpListener)
-	go http.ListenAndServe(":19006", nil)
+	go clientConnectionListener(ClientToGameServerPort)
 
 	for i := 0; i < 169; i++ {
 		addPlayerByName(fmt.Sprintf("bot_%02x", rand.Int31()), true)

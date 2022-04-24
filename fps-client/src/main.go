@@ -18,10 +18,13 @@ import (
 	"time"
 )
 
+const ClientToLobbyServerPort = ":19001"
+const ClientToGameServerPort = ":19003"
+
 var clientsToAdd int32 = 30
 var currentConnections int32 = 0
 var lobbyAddr = "127.0.0.1"
-var lobbyPort = ":19003"
+
 var isFrozen = false
 
 var currentConnectionsMutex = &sync.Mutex{}
@@ -43,7 +46,7 @@ func loop() {
 	g.SingleWindow().Layout(
 		g.Style().SetFontSize(32).To(g.Label("Client spawner cho server PWNBG")),
 		g.Row(
-			g.Label("Địa chỉ IP game lobby"),
+			g.Label("Địa chỉ IP server lobby"),
 			g.InputText(&lobbyAddr).Size(200),
 		),
 
@@ -52,7 +55,8 @@ func loop() {
 			g.InputInt(&clientsToAdd).Size(60),
 			g.Button("Thêm client mới").OnClick(func() {
 				for i := 0; i < int(clientsToAdd); i++ {
-					go clientToGameServer(lobbyAddr + lobbyPort)
+					//go clientToGameServer(lobbyAddr+ClientToGameServerPort, fmt.Sprintf("player_%02x", rand.Int31()))
+					go clientToLobbyServer(lobbyAddr+ClientToLobbyServerPort, fmt.Sprintf("player_%02x", rand.Int31()))
 				}
 			}),
 		),
@@ -63,6 +67,7 @@ func loop() {
 			isFrozen = !isFrozen
 		}),
 	)
+	g.Update()
 }
 
 func updatePlayerDataToServer(state *game.RoomState, player *game.Player, packetFreq *int, conn net.Conn) {
@@ -107,11 +112,61 @@ Loop:
 
 }
 
-func clientToGameServer(url string) {
-	time.Sleep(time.Second)
+func clientToLobbyServer(url string, playerName string) {
+	if sess, err := kcp.Dial(url); err == nil {
+		buffer := make([]byte, 1024)
 
-	playerName := fmt.Sprintf("player_%02x", rand.Int31())
+		var buf bytes.Buffer
+		utils.WriteAs1Byte(&buf, utils.PacketType_ClientConnectToLobbyServer)
+		utils.WriteAs1Byte(&buf, utils.PacketSubType_ClientConnectToLobbyServer_LoginRequest)
+		utils.WriteString(&buf, playerName)
+		sess.Write(buf.Bytes())
 
+		buffer = make([]byte, 1024)
+		if _, err := sess.Read(buffer); err == nil {
+			var byteBuffer bytes.Buffer
+			byteBuffer.Write(buffer)
+			packetType := utils.ReadAs1Byte(&byteBuffer)
+			if packetType != utils.PacketType_ClientConnectToLobbyServer {
+				log.Println("Wrong packet type (PacketType_ClientConnectToLobbyServer)")
+				return
+			}
+			packetSubType := utils.ReadAs1Byte(&byteBuffer)
+			if packetSubType != utils.PacketSubType_ClientConnectToLobbyServer_LoginSuccess {
+				log.Println("Not login success (PacketSubType_ClientConnectToLobbyServer_LoginSuccess)")
+				return
+			}
+
+			buffer = make([]byte, 1024)
+			if _, err := sess.Read(buffer); err == nil {
+				byteBuffer.Reset()
+				byteBuffer.Write(buffer)
+				packetType = utils.ReadAs1Byte(&byteBuffer)
+				if packetType != utils.PacketType_LobbyServerToClient {
+					log.Println("Wrong packet type PacketType_LobbyServerToClient")
+					return
+				}
+				packetSubType = utils.ReadAs1Byte(&byteBuffer)
+				if packetSubType != utils.PacketSubType_LobbyServerToClient_GameServerAddress {
+					log.Println("Wrong packet subtype PacketSubType_LobbyServerToClient_GameServerAddress")
+					return
+				}
+
+				gameServerAddr := utils.ReadString(&byteBuffer)
+				clientToGameServer(gameServerAddr+ClientToGameServerPort, playerName)
+			} else {
+				log.Println(err)
+			}
+		} else {
+			log.Println(err)
+		}
+
+	} else {
+		log.Println(err)
+	}
+}
+
+func clientToGameServer(url string, playerName string) {
 	if sess, err := kcp.Dial(url); err == nil {
 		buffer := make([]byte, 1024)
 

@@ -47,7 +47,6 @@
 
 ### Cổng:
 
--   19002: nghe server lobby
 -   19003: nghe client
 
 # Giao thức game PWNBG
@@ -79,12 +78,11 @@
 
 -   **Byte 1:** Loại gói tin
 
-### SG gửi lệnh muốn thêm vào SL, với các cài đặt hiện tại của SL
+### SG gửi lệnh muốn thêm vào SL
 
 -   **Byte 1** = 1
+
 -   **Byte 2-3**: Tần suất gửi gói tin có tần suất cố định của client/server (gói/giây) (bội số của 2, mặc định là 64)
--   **Byte 4-5**: Số lượng room tối đa (bội số của 2, mặc định là 4)
--   **Byte 6-7**: Số lượng player tối đa (mặc định là 20)
 
 ### SL gửi thông báo xác nhận thành công
 
@@ -114,7 +112,8 @@
 ### SG gửi tình trạng của phòng (5s/lần)
 
 - **Byte 1** = 1
-- Nhóm 5 byte từ byte số 2:
+- **Byte 2-3**: Tần suất gửi gói tin có tần suất cố định của client/server (gói/giây) (bội số của 2, mặc định là 64)
+- Nhóm 5 byte từ byte số 4:
   - **Byte 0-1**: Số người chơi hiện tại
   - **Byte 2-3**: Số người chơi tối đa
   - **Byte 4**: Trạng thái game (0 = đang chờ, 1 = đang chơi, 2 = kết thúc)
@@ -179,3 +178,13 @@
 
 - **Byte 1** = 5
 - **Byte 2-3:** Tần suất gửi (Hz)
+
+## SG gửi thông báo scale up/down (byte 0 = 7):
+- **Byte 1:** Loại cập nhật trong game
+
+### SG yêu cầu SC scale up
+- **Byte 1** = 1
+
+### SG yêu cầu SC scale down
+- **Byte 1** = 2
+

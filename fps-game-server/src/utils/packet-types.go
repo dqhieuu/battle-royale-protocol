@@ -7,6 +7,7 @@ const (
 	PacketType_GameServerPeriodicToLobbyServer = 4
 	PacketType_ClientConnectToGameServer       = 5
 	PacketType_GameServerAndClientInGame       = 6
+	PacketType_ScaleAlertToGameServer          = 7
 )
 
 const (
@@ -27,6 +28,8 @@ const (
 	PacketSubType_GameServerAndClientInGame_HPUpdate               = 3
 	PacketSubType_GameServerAndClientInGame_StateUpdate            = 4
 	PacketSubType_GameServerAndClientInGame_PacketFrequencyUpdate  = 5
+	PacketSubType_ScaleAlertToGameServer_ScaleUp                   = 1
+	PacketSubType_ScaleAlertToGameServer_ScaleDown                 = 2
 )
 
 const (
