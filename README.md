@@ -1,3 +1,5 @@
+![Các giao diện](./docs/all-apps.png)
+
 # Lưu data
 
 ## Server lobby
