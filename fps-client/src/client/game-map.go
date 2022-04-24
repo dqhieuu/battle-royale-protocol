@@ -76,7 +76,6 @@ func (is *ItemStore) loadItem(path string) {
 
 	// Print
 	for _, item := range data {
-		item := item
 		is.store.Store(item.Id, &item) // add to map
 		is.allKeys = append(is.allKeys, item.Id)
 		switch item.Type {

@@ -54,8 +54,8 @@ func ReadAs8Byte(buffer *bytes.Buffer) int {
 }
 
 func ReadBytes(buffer *bytes.Buffer) []byte {
-	var val []byte
-	binary.Read(buffer, binary.LittleEndian, &val)
+	val := make([]byte, 1024)
+	buffer.Read(val)
 	return val
 }
 
@@ -63,6 +63,12 @@ func ReadNBytes(buffer *bytes.Buffer, n int) []byte {
 	val := make([]byte, n)
 	binary.Read(buffer, binary.LittleEndian, &val)
 	return val
+}
+
+func ReadString(buffer *bytes.Buffer) string {
+	val := make([]byte, 1024)
+	buffer.Read(val)
+	return string(val[:bytes.IndexByte(val, 0)]) // trim all trailing 0x00
 }
 
 func ReadUntil(buffer *bytes.Buffer, delim byte) []byte {

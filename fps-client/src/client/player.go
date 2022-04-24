@@ -2,7 +2,7 @@ package game
 
 import (
 	"fmt"
-	"fps-game-server/src/utils"
+	"fps-client/src/utils"
 	"github.com/golang/geo/r2"
 	"math"
 	"math/rand"

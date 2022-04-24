@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/AllenDang/giu v0.6.3-0.20220411093041-e45585fb01c3
 	github.com/golang/geo v0.0.0-20210211234256-740aa86cb551
+	github.com/paulbellamy/ratecounter v0.2.0
 	github.com/xtaci/kcp-go v5.4.20+incompatible
 )
 

@@ -71,6 +71,7 @@ func (room *GameRoom) IsFull() bool {
 
 func (room *GameRoom) Activate() {
 	for room.State != FINISHED {
+		room.mutex.Lock()
 		if room.State == WAITING {
 			if room.PlayerCount() >= MinTriggerPlayingPlayers {
 				time.Sleep(StateTransitionDelay)
@@ -122,6 +123,7 @@ func (room *GameRoom) Activate() {
 				room.State = FINISHED
 			}
 		}
+		room.mutex.Unlock()
 		time.Sleep(time.Millisecond * 15)
 	}
 }
