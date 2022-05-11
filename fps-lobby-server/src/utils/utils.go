@@ -1,9 +1,12 @@
 package utils
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net"
+	"net/http"
 )
 
 func RandRangeInt(min, max int) int {
@@ -28,4 +31,34 @@ func GetOutboundIP() net.IP {
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
 
 	return localAddr.IP
+}
+
+type IP struct {
+	Query string
+}
+
+func GetPublicIp() string {
+	req, err := http.Get("http://ip-api.com/json/")
+	if err != nil {
+		return err.Error()
+	}
+	defer req.Body.Close()
+
+	body, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		return err.Error()
+	}
+
+	var ip IP
+	json.Unmarshal(body, &ip)
+
+	return ip.Query
+}
+
+func IsPrivateIp(ip *string) bool {
+	if ip == nil {
+		return false
+	}
+	ipAddress := net.ParseIP(*ip)
+	return ipAddress.IsPrivate()
 }

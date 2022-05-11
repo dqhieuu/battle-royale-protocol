@@ -20,6 +20,7 @@ import (
 )
 
 var OutboundIp = utils.GetOutboundIP()
+var PublicIp *string
 
 var AccountDatabase sync.Map // a map of username -> *Account
 
@@ -198,6 +199,10 @@ func handleClient(conn net.Conn) {
 					}
 				}
 
+				if utils.IsPrivateIp(gameServerAddress) && PublicIp != nil {
+					gameServerAddress = PublicIp
+				}
+
 				byteBuffer.Reset()
 				utils.WriteAs1Byte(&byteBuffer, utils.PacketType_LobbyServerToClient)
 				utils.WriteAs1Byte(&byteBuffer, utils.PacketSubType_LobbyServerToClient_GameServerAddress)
@@ -245,6 +250,13 @@ const AlerterToLobbyServerPort = ":19006"
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
+
+	go func() {
+		fetchedIp := utils.GetPublicIp()
+		if fetchedIp != "" {
+			PublicIp = &fetchedIp
+		}
+	}()
 
 	go GameServerConnectionListener(GameServerToLobbyServerPort)
 	go ClientConnectionListener(ClientToLobbyServerPort)
