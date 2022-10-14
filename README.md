@@ -1,5 +1,10 @@
 ![Các giao diện](./docs/all-apps.png)
 
+# Các tài liệu
+- Slide thuyết trình: https://docs.google.com/presentation/d/1vHSztSNsZoYcw58dJthm12sMkQBbFvE5TPDn9emm3lI/edit?usp=sharing
+- Doc mô tả: https://drive.google.com/file/d/1nD5BiTWYvl1jwTKewVxBRiU8wOjuSFPN/view?usp=sharing
+- Video demo: https://drive.google.com/file/d/1xjUxMwpunkw_OBn5YKP3hOiKBuBGunU1/view?usp=sharing
+
 # Lưu data
 
 ## Server lobby
